@@ -1,0 +1,21 @@
+# FastAPI
+fastapi
+
+# Langchain
+langchain
+langchain_groq
+langchain_google_genai
+
+# Git
+GitPython
+
+psycopg
+psycopg2
+psycopg[binary]
+
+uvicorn
+sqlalchemy
+dotenv
+pgvector
+
+alembic
