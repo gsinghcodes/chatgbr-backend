@@ -23,8 +23,6 @@ class CodeChunkModel(Base, DateTimeMixin):
         nullable=False,
     )
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
-    start_line: Mapped[int] = mapped_column(nullable=False)
-    end_line: Mapped[int] = mapped_column(nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
     repository: Mapped["RepositoryModel"] = relationship(
