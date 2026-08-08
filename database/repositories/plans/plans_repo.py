@@ -5,25 +5,22 @@ from sqlalchemy.orm import Session
 
 from database.models.plans import PlanModel
 from core.enums.plan import PlanCode
-from repositories.base import BaseRepository
+from database.repositories.base import BaseRepository
 
 
 class PlanRepository(BaseRepository[PlanModel]):
 
-    def __init__(self, session: Session):
-        super().__init__(session)
-
-    def create(self, plan: PlanModel) -> PlanModel:
-        self.add(plan)
+    def create(self, plan: PlanModel, session: Session) -> PlanModel:
+        self.add(plan, session)
         return plan
 
-    def get_by_id(self, plan_id) -> Optional[PlanModel]:
-        return self.session.get(PlanModel, plan_id)
+    def get_by_id(self, plan_id, session: Session) -> Optional[PlanModel]:
+        return session.get(PlanModel, plan_id)
 
-    def get_by_code(self, code: PlanCode) -> Optional[PlanModel]:
-        return self.session.scalar(select(PlanModel).where(PlanModel.code == code))
+    def get_by_code(self, code: PlanCode, session: Session) -> Optional[PlanModel]:
+        return session.scalar(select(PlanModel).where(PlanModel.code == code))
 
-    def list_active(self) -> list[PlanModel]:
+    def list_active(self, session: Session) -> list[PlanModel]:
         return list(
-            self.session.scalars(select(PlanModel).where(PlanModel.is_active.is_(True)))
+            session.scalars(select(PlanModel).where(PlanModel.is_active.is_(True)))
         )

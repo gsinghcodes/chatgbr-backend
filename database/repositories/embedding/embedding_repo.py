@@ -1,21 +1,19 @@
 from typing import Optional, List
 from uuid import UUID
 
-from pgvector.sqlalchemy import cosine_distance
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from database.models.code_chunk import CodeChunkModel
 from database.models.embeddings import ChunkEmbeddingModel
-from repositories.base import BaseRepository
+from database.repositories.base import BaseRepository
 
 
 class EmbeddingRepository(BaseRepository[ChunkEmbeddingModel]):
     def create(
-        self,
-        embedding: ChunkEmbeddingModel,
+        self, embedding: ChunkEmbeddingModel, session: Session
     ) -> ChunkEmbeddingModel:
-        self.add(embedding)
+        self.add(embedding, session)
         return embedding
 
     def bulk_create(
@@ -25,38 +23,32 @@ class EmbeddingRepository(BaseRepository[ChunkEmbeddingModel]):
         return
 
     def get_by_chunk_id(
-        self,
-        chunk_id: UUID,
+        self, chunk_id: UUID, session: Session
     ) -> Optional[ChunkEmbeddingModel]:
-        return self.session.scalar(
+        return session.scalar(
             select(ChunkEmbeddingModel).where(ChunkEmbeddingModel.chunk_id == chunk_id)
         )
 
-    def delete_by_chunk_id(
-        self,
-        chunk_id: UUID,
-    ) -> None:
-        embedding = self.get_by_chunk_id(chunk_id)
+    def delete_by_chunk_id(self, chunk_id: UUID, session: Session) -> None:
+        embedding = self.get_by_chunk_id(chunk_id, session=session)
         if embedding:
-            self.delete(embedding)
+            self.delete(embedding, session)
 
-    def find_similar(
+    def similarity_search(
         self,
-        embedding: list[float],
+        query_embedding: list[float],
         repository_id: UUID,
-        limit: int = 10,
-    ) -> list[ChunkEmbeddingModel]:
+        session: Session,
+        top_k: int = 10,
+    ) -> list[CodeChunkModel]:
         return list(
-            self.session.scalars(
-                select(ChunkEmbeddingModel)
-                .join(ChunkEmbeddingModel.chunk)
+            session.scalars(
+                select(CodeChunkModel)
+                .join(CodeChunkModel.embedding)
                 .where(CodeChunkModel.repository_id == repository_id)
                 .order_by(
-                    cosine_distance(
-                        ChunkEmbeddingModel.embedding,
-                        embedding,
-                    )
+                    ChunkEmbeddingModel.embedding.cosine_distance(query_embedding)
                 )
-                .limit(limit)
+                .limit(top_k)
             )
         )

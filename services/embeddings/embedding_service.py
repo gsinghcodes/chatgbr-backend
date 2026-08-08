@@ -9,6 +9,7 @@ class EmbeddingService:
         self.client = GoogleGenerativeAIEmbeddings(
             model=AIModel.GEMINI_EMBEDDING.value,
             google_api_key=GEMINI_API_KEY,
+            output_dimensionality=1536,
         )
 
     def embed_query(

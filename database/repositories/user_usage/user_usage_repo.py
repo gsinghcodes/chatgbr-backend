@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from database.models.user_usage import UserUsageModel
-from repositories.base import BaseRepository
+from database.repositories.base import BaseRepository
 
 
 class UserUsageRepository(BaseRepository[UserUsageModel]):
