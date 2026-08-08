@@ -4,8 +4,9 @@ from database.models.base_class import Base
 from database.models.date_model import DateTimeMixin
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import mapped_column, Mapped, relationship
+from core.enums.user_usage import AIModel
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, Enum
 
 if TYPE_CHECKING:
     from database.models.code_chunk import CodeChunkModel
@@ -20,9 +21,6 @@ class ChunkEmbeddingModel(Base, DateTimeMixin):
         primary_key=True,
     )
     embedding = mapped_column(Vector(1536), nullable=False)
-    embedding_model: Mapped[str] = mapped_column(
-        String(100), default="text-embedding-3-small", nullable=False
-    )
 
     chunk: Mapped["CodeChunkModel"] = relationship(
         "CodeChunkModel", back_populates="embedding"

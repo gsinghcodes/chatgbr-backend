@@ -11,26 +11,24 @@ class BaseRepository(Generic[T]):
 
     model: type[T]
 
-    def __init__(self, session: Session):
-        self.session = session
-
-    def create(self, instance: T) -> T:
+    def create(self, instance: T, session: Session) -> T:
         """Add an instance to the current session."""
-        self.session.add(instance)
+        session.add(instance)
+        session.flush()
         return instance
 
-    def get_by_id(self, id: UUID):
+    def get_by_id(self, id: UUID, session: Session):
         """Return an instance by its primary key."""
-        return self.session.get(self.model, id)
+        return session.get(self.model, id)
 
-    def delete(self, instance: T) -> None:
+    def delete(self, instance: T, session: Session) -> None:
         """Delete an instance."""
-        self.session.delete(instance)
+        session.delete(instance)
 
-    def flush(self) -> None:
+    def flush(self, session: Session) -> None:
         """Flush pending changes to the database."""
-        self.session.flush()
+        session.flush()
 
-    def refresh(self, instance: T) -> None:
+    def refresh(self, instance: T, session: Session) -> None:
         """Refresh an instance from the database."""
-        self.session.refresh(instance)
+        session.refresh(instance)

@@ -5,6 +5,7 @@ fastapi
 langchain
 langchain_groq
 langchain_google_genai
+langchain_community
 
 # Git
 GitPython
@@ -19,3 +20,10 @@ dotenv
 pgvector
 
 alembic
+
+pwdlib
+PyJWT
+email-validator
+python-dotenv
+Authlib
+pwdlib[argon2]
