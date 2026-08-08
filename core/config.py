@@ -7,6 +7,7 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("POSTGRES_CONN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
