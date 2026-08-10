@@ -19,29 +19,24 @@ def get_current_user(
 ) -> UserModel:
     try:
         payload = jwt_service.decode_access_token(
-            token=credentials.credentials,
+            credentials.credentials,
         )
-
-        user_id = UUID(payload["sub"])
-
-        return auth_service.get_current_user(
-            user_id=user_id,
-        )
-
     except jwt.ExpiredSignatureError:
+        raise HTTPException(401, "Access token has expired.")
+    except jwt.InvalidTokenError as exc:
+        raise HTTPException(401, f"Invalid access token: {exc}")
+
+    try:
+        user_id = UUID(payload["sub"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(401, f"Invalid token subject: {exc}")
+
+    user = auth_service.get_current_user(user_id=user_id)
+
+    if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Access token has expired.",
+            401,
+            "User referenced by this token does not exist.",
         )
 
-    except jwt.InvalidTokenError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid access token.",
-        )
-
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication failed.",
-        )
+    return user

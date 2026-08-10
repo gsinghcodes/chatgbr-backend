@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
+from typing import Optional
 from database.models.user import UserModel
 from database.repositories.base import BaseRepository
 
@@ -21,3 +21,10 @@ class UserRepository(BaseRepository[UserModel]):
 
     def exists_by_github_id(self, github_id: str, session: Session) -> bool:
         return self.get_by_github_id(github_id, session) is not None
+
+    def get_by_github_id(
+        self,
+        github_id: str,
+        session: Session,
+    ) -> Optional[UserModel]:
+        return session.scalar(select(UserModel).where(UserModel.github_id == github_id))

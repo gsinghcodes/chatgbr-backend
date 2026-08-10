@@ -77,12 +77,15 @@ def login(request: LoginRequest):
 def me(
     current_user: UserModel = Depends(get_current_user),
 ):
-    return ReturnJSON(
-        message="Authenticated user fetched successfully.",
-        data={
-            "id": current_user.id,
-            "email": current_user.email,
-            "github_username": current_user.github_username,
-            "avatar_url": current_user.avatar_url,
-        },
-    )
+    try:
+        return ReturnJSON(
+            message="Authenticated user fetched successfully.",
+            data={
+                "id": current_user.id,
+                "email": current_user.email,
+                "github_username": current_user.github_username,
+                "avatar_url": current_user.avatar_url,
+            },
+        )
+    except Exception as e:
+        print(e)
