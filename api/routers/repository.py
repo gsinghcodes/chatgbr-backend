@@ -31,18 +31,14 @@ def chat(
     current_user: UserModel = Depends(get_current_user),
 ):
     try:
-        answer = chat_service.ask(
+        result = chat_service.ask(
             user_id=current_user.id,
             repository_id=repository_id,
+            conversation_id=request.conversation_id,
             question=request.question,
         )
 
-        return ReturnJSON(
-            message="Answer generated successfully.",
-            data={
-                "answer": answer,
-            },
-        )
+        return ReturnJSON(message="Answer generated successfully.", data=result)
 
     except ValueError as exc:
         raise HTTPException(

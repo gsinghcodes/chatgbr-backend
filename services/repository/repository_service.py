@@ -83,7 +83,7 @@ class RepositoryService:
             if repository.user_id != user_id:
                 raise ValueError("You do not have access to this repository.")
 
-            return repository
+            return serialize_model(repository)
 
     def delete_repository(
         self,

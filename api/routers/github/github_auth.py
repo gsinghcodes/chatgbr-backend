@@ -1,24 +1,24 @@
 import secrets
 from typing import Optional
-from fastapi import APIRouter, Cookie, HTTPException, status
+from fastapi import APIRouter, Cookie, HTTPException, status, Depends
 from fastapi.responses import RedirectResponse
 from core.config import FRONTEND_URL
 
-from services.auth.github_oauth_service import GitHubOAuthService
+from services.github.github_service import GitHubService
 
 router = APIRouter(
     prefix="/auth/github",
     tags=["GitHub Auth"],
 )
 
-github_oauth_service = GitHubOAuthService()
+github_service = GitHubService()
 
 
 @router.get("")
 async def github_login():
     state = secrets.token_urlsafe(32)
 
-    authorization_url = github_oauth_service.get_authorization_url(
+    authorization_url = github_service.get_authorization_url(
         state=state,
     )
 
@@ -60,7 +60,7 @@ async def github_callback(
             detail="Invalid GitHub OAuth state.",
         )
 
-    access_token = await github_oauth_service.authenticate(code=code)
+    access_token = await github_service.authenticate(code=code)
 
     return RedirectResponse(
         url=f"{FRONTEND_URL}/auth/github/callback" f"?access_token={access_token}",

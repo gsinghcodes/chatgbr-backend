@@ -1,9 +1,10 @@
 import uuid
+from datetime import datetime
 from database.models.base_class import Base
 from database.models.date_model import DateTimeMixin
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import String, ForeignKey
+from sqlalchemy import String, ForeignKey, Text, DateTime, BigInteger
 from typing import Optional, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -31,6 +32,26 @@ class UserModel(Base, DateTimeMixin):
     )
     github_username: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    github_access_token: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    github_refresh_token: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    github_token_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    github_installation_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        nullable=True,
+    )
 
     # Current storage usage (cached for fast quota checks)
     storage_used_bytes: Mapped[int] = mapped_column(
