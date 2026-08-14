@@ -102,10 +102,6 @@ class ChatService:
                 question=question,
             )
 
-            answer = self.llm_service.generate(
-                prompt=prompt,
-            )
-
             self.message_repository.create(
                 instance=MessageModel(
                     conversation_id=conversation_id,
@@ -115,6 +111,19 @@ class ChatService:
                 ),
                 session=session,
             )
+
+            answer_chunks = []
+
+            for event in self.llm_service.stream(prompt=prompt):
+                if event["type"] == "token":
+                    answer_chunks.append(event["content"])
+
+                yield {
+                    "type": event["type"],
+                    "content": event["content"],
+                }
+
+            answer = "".join(answer_chunks)
 
             self.message_repository.create(
                 instance=MessageModel(
@@ -128,9 +137,9 @@ class ChatService:
 
             session.commit()
 
-            return {
-                "conversation_id": conversation_id,
-                "answer": answer,
+            yield {
+                "conversation_id": str(conversation_id),
+                "type": "done",
             }
 
     def _build_context(

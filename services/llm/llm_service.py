@@ -6,15 +6,25 @@ from core.config import GROQ_API_KEY
 class LLMService:
     def __init__(self):
         self.model = ChatGroq(model="openai/gpt-oss-120b", api_key=GROQ_API_KEY)
+        self.parser = StrOutputParser()
 
     def generate(
         self,
         prompt: str,
     ) -> str:
-        response = self.model.invoke(prompt)
-        parser = StrOutputParser()
+        chain = self.model | self.parser
 
-        return parser.invoke(response) or ""
+        return chain.invoke(prompt) or ""
+
+    def stream(self, prompt: str):
+        for chunk in self.model.stream(prompt):
+            reasoning = chunk.additional_kwargs.get("reasoning_content")
+            if reasoning:
+                yield {"type": "reasoning", "content": reasoning}
+
+            content = self.parser.invoke(chunk)
+            if content:
+                yield {"type": "token", "content": content}
 
     def generate_conversation_title(
         self,

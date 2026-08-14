@@ -1,4 +1,5 @@
 import httpx
+from urllib.parse import urlparse
 from datetime import datetime, timedelta, timezone
 import secrets
 from urllib.parse import urlencode
@@ -287,6 +288,47 @@ class GitHubService:
                 "repositories",
                 [],
             )
+
+    async def repository_exists(
+        self,
+        clone_url: str,
+        access_token: str,
+    ) -> bool:
+
+        parsed = urlparse(clone_url)
+
+        if parsed.netloc != "github.com":
+            return False
+
+        parts = parsed.path.strip("/").split("/")
+
+        if len(parts) != 2:
+            return False
+
+        owner = parts[0]
+        repo = parts[1]
+
+        if repo.endswith(".git"):
+            repo = repo[:-4]
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://api.github.com/repos/{owner}/{repo}",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                },
+            )
+
+        if response.status_code == 200:
+            return True
+
+        if response.status_code == 404:
+            return False
+
+        response.raise_for_status()
+
+        return False
 
     @staticmethod
     def _get_email(

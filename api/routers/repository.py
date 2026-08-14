@@ -1,16 +1,18 @@
 from uuid import UUID
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 
 from api.dependencies.auth import get_current_user
-from api.schemas.repository_schema import CreateRepositoryRequest
-from api.schemas.common import ReturnJSON
 from api.schemas.chat_schema import ChatRequest
+from api.schemas.common import ReturnJSON
+from api.schemas.repository_schema import CreateRepositoryRequest
 
 from database.models.user import UserModel
 
-from services.repository.repository_service import RepositoryService
 from services.chat.chat_service import ChatService
+from services.repository.repository_service import RepositoryService
 
 router = APIRouter(
     prefix="/repositories",
@@ -21,36 +23,47 @@ repository_service = RepositoryService()
 chat_service = ChatService()
 
 
-@router.post(
-    "/{repository_id}/chat",
-    response_model=ReturnJSON,
-)
+@router.post("/{repository_id}/chat")
 def chat(
     repository_id: UUID,
     request: ChatRequest,
     current_user: UserModel = Depends(get_current_user),
 ):
-    try:
-        result = chat_service.ask(
-            user_id=current_user.id,
-            repository_id=repository_id,
-            conversation_id=request.conversation_id,
-            question=request.question,
-        )
+    def event_stream():
+        try:
+            for event in chat_service.ask(
+                user_id=current_user.id,
+                repository_id=repository_id,
+                conversation_id=request.conversation_id,
+                question=request.question,
+            ):
+                yield f"data: {json.dumps(event)}\n\n"
 
-        return ReturnJSON(message="Answer generated successfully.", data=result)
+        except ValueError as exc:
+            error_event = {
+                "type": "error",
+                "message": str(exc),
+            }
 
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        )
+            yield f"data: {json.dumps(error_event)}\n\n"
 
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
-        )
+        except Exception:
+
+            error_event = {
+                "type": "error",
+                "message": "Failed to generate response.",
+            }
+
+            yield f"data: {json.dumps(error_event)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @router.post(
