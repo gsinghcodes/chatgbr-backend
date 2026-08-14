@@ -2,6 +2,7 @@ import uuid
 
 from database.models.repositories import RepositoryModel
 from database.repositories.repository.repository_repo import RepositoryRepository
+from database.repositories.user.user_repo import UserRepository
 from database.session import SessionLocal
 
 from core.enums.repositories import RepositoryStatus
@@ -10,19 +11,47 @@ from utils.model_utils import serialize_model
 from services.ingestion.repository_ingestion_service import (
     RepositoryIngestionService,
 )
+from services.github.github_service import GitHubService
 
 
 class RepositoryService:
     def __init__(self):
         self.repository_repository = RepositoryRepository()
         self.repository_ingestion_service = RepositoryIngestionService()
+        self.github_service = GitHubService()
+        self.user_repository = UserRepository()
 
-    def create_repository(
+    async def create_repository(
         self,
         user_id: uuid.UUID,
         clone_url: str,
     ) -> RepositoryModel:
+
+        clone_url = clone_url.strip()
+
         with SessionLocal() as session:
+
+            user = self.user_repository.get_by_id(
+                id=user_id,
+                session=session,
+            )
+
+            if user is None:
+                raise ValueError("User not found.")
+
+            if not user.github_access_token:
+                raise ValueError("GitHub account is not connected.")
+
+            exists = await self.github_service.repository_exists(
+                clone_url=clone_url,
+                access_token=user.github_access_token,
+            )
+
+            if not exists:
+                raise ValueError(
+                    "GitHub repository does not exist or is not accessible."
+                )
+
             existing_repository = self.repository_repository.get_by_user_and_clone_url(
                 user_id=user_id,
                 clone_url=clone_url,
@@ -47,8 +76,6 @@ class RepositoryService:
             session.commit()
             session.refresh(repository)
 
-        # TODO:
-        # Replace with a background task later.
         self.repository_ingestion_service.ingest_repository(
             repository_id=repository.id,
         )
@@ -83,7 +110,7 @@ class RepositoryService:
             if repository.user_id != user_id:
                 raise ValueError("You do not have access to this repository.")
 
-            return repository
+            return serialize_model(repository)
 
     def delete_repository(
         self,

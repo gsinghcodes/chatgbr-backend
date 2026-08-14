@@ -4,3 +4,6 @@ from .code_chunk import CodeChunkModel
 from .embeddings import ChunkEmbeddingModel
 from .plans import PlanModel
 from .user_usage import UserUsageModel
+from .github_installation_state import GitHubInstallationStateModel
+from .conversation import ConversationModel
+from .messages import MessageModel
