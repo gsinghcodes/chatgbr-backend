@@ -1,5 +1,5 @@
 import uuid
-
+import math
 from sqlalchemy.orm import Session
 
 from database.models.messages import MessageModel
@@ -22,18 +22,37 @@ class MessageRepository:
         conversation_id: uuid.UUID,
         user_id: uuid.UUID,
         session: Session,
+        page: int = 1,
+        limit: int = 20,
     ) -> list[MessageModel]:
-        return (
+        offset = (page - 1) * limit
+        query = (
             session.query(MessageModel)
             .filter(
                 MessageModel.conversation_id == conversation_id,
                 MessageModel.user_id == user_id,
             )
             .order_by(
-                MessageModel.created_at.asc(),
+                MessageModel.created_at.desc(),
             )
-            .all()
         )
+
+        total = query.count()
+
+        messages = query.offset(offset).limit(limit).all()
+
+        total_pages = math.ceil(total / limit) if limit else 0
+
+        pagination = {
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+            "has_next": total_pages > page,
+            "has_prev": page > 1,
+        }
+
+        return messages, pagination
 
     def get_recent(
         self,

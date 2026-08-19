@@ -1,5 +1,6 @@
 import uuid
 
+from api.schemas.conversation_schema import ConversationPagination
 from database.models.conversation import ConversationModel
 from database.repositories.conversation.conversation_repo import (
     ConversationRepository,
@@ -67,6 +68,7 @@ class ConversationService:
     def get_messages(
         self,
         user_id: uuid.UUID,
+        pagination: ConversationPagination,
         conversation_id: uuid.UUID,
     ):
         with SessionLocal() as session:
@@ -79,10 +81,17 @@ class ConversationService:
             if conversation is None:
                 raise ValueError("Conversation not found.")
 
-            messages = self.message_repository.list_by_conversation(
+            messages, pagination_data = self.message_repository.list_by_conversation(
                 conversation_id=conversation_id,
                 user_id=user_id,
+                page=pagination.page,
+                limit=pagination.limit,
                 session=session,
             )
 
-            return [serialize_model(message) for message in messages]
+            serialized_messages = [serialize_model(message) for message in messages]
+
+            return {
+                "messages": serialized_messages,
+                "pagination": pagination_data,
+            }

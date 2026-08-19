@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies.auth import get_current_user
 from api.schemas.common import ReturnJSON
+from api.schemas.conversation_schema import ConversationPagination
 
 from database.models.user import UserModel
 
@@ -42,23 +43,25 @@ def list_conversations(
         )
 
 
-@router.get(
+@router.post(
     "/conversations/{conversation_id}/messages",
     response_model=ReturnJSON,
 )
 def list_messages(
     conversation_id: uuid.UUID,
+    pagination: ConversationPagination,
     current_user: UserModel = Depends(get_current_user),
 ):
     try:
-        messages = conversation_service.get_messages(
+        data = conversation_service.get_messages(
             user_id=current_user.id,
+            pagination=pagination,
             conversation_id=conversation_id,
         )
 
         return ReturnJSON(
             message="Messages fetched successfully.",
-            data=messages,
+            data=data,
         )
 
     except ValueError as exc:
