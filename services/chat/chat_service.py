@@ -112,6 +112,8 @@ class ChatService:
                 session=session,
             )
 
+            session.commit()
+
             answer_chunks = []
 
             for event in self.llm_service.stream(prompt=prompt):
