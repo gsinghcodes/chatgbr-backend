@@ -2,7 +2,7 @@ from uuid import UUID
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 
 from api.dependencies.auth import get_current_user
 from api.schemas.chat_schema import ChatRequest
@@ -71,26 +71,16 @@ def chat(
     response_model=ReturnJSON,
     status_code=status.HTTP_201_CREATED,
 )
-def create_repository(
+async def create_repository(
     request: CreateRepositoryRequest,
     current_user: UserModel = Depends(get_current_user),
 ):
-    try:
-        repository = repository_service.create_repository(
-            user_id=current_user.id,
-            clone_url=request.clone_url,
-        )
+    data = await repository_service.create_repository(
+        user_id=current_user.id,
+        clone_url=request.clone_url,
+    )
 
-        return ReturnJSON(
-            message="Repository created successfully.",
-            data=repository,
-        )
-
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        )
+    return JSONResponse(content=data, status_code=data["status"])
 
 
 @router.get(

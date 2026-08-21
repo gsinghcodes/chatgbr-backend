@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Cookie
+from fastapi.responses import JSONResponse, Response
+from typing import Optional
 
 from api.schemas.auth_schema import (
     LoginRequest,
@@ -10,7 +12,7 @@ from services.auth.auth_service import AuthService
 from database.models.user import UserModel
 
 router = APIRouter(
-    prefix="/auth",
+    prefix="/api/v1/auth",
     tags=["Authentication"],
 )
 
@@ -23,51 +25,71 @@ auth_service = AuthService()
     status_code=status.HTTP_201_CREATED,
 )
 def register(request: RegisterRequest):
-    try:
-        access_token = auth_service.register(
-            email=request.email,
-            password=request.password,
+    data = auth_service.register(
+        email=request.email,
+        password=request.password,
+    )
+
+    response = JSONResponse(content=data, status_code=data["status"])
+
+    if data["status"] == 200:
+        response.set_cookie(
+            key="refresh_token",
+            value=data["data"]["refresh_token"],
+            httponly=True,
+            secure=False,
+            samesite="lax",
+            max_age=15 * 24 * 60 * 60,
         )
 
-        return ReturnJSON(
-            message="User registered successfully.",
-            data={
-                "access_token": access_token,
-                "token_type": "Bearer",
-            },
-        )
-
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        )
+    return response
 
 
 @router.post(
     "/login",
     response_model=ReturnJSON,
 )
-def login(request: LoginRequest):
-    try:
-        access_token = auth_service.login(
-            email=request.email,
-            password=request.password,
+def login(request: LoginRequest, response: Response):
+    data = auth_service.login(
+        email=request.email,
+        password=request.password,
+    )
+
+    response = JSONResponse(content=data, status_code=data["status"])
+
+    if data["status"] == 200:
+        response.set_cookie(
+            key="refresh_token",
+            value=data["data"]["refresh_token"],
+            httponly=True,
+            secure=False,
+            samesite="lax",
+            max_age=15 * 24 * 60 * 60,
         )
 
-        return ReturnJSON(
-            message="Login successful.",
-            data={
-                "access_token": access_token,
-                "token_type": "Bearer",
-            },
-        )
+    return response
 
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc),
-        )
+
+@router.post("/logout")
+def logout(
+    user: UserModel = Depends(get_current_user),
+    refresh_token: Optional[str] = Cookie(default=None),
+):
+    data = auth_service.logout_user(user_id=user.id, token=refresh_token)
+
+    response = JSONResponse(content=data, status_code=data["status"])
+
+    response.delete_cookie(
+        key="refresh_token", httponly=True, secure=False, samesite="lax"
+    )
+
+    return response
+
+
+@router.post("/refresh")
+def refresh_access_token(refresh_token: Optional[str] = Cookie(default=None)):
+    data = auth_service.refresh_access_token(refresh_token)
+    return JSONResponse(content=data, status_code=data["status"])
 
 
 @router.get(
@@ -86,6 +108,7 @@ def me(
                 "github_username": current_user.github_username,
                 "avatar_url": current_user.avatar_url,
             },
+            status=200,
         )
     except Exception as e:
         print(e)

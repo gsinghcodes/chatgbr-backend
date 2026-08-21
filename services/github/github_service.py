@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 from datetime import datetime, timedelta, timezone
 import secrets
 from urllib.parse import urlencode
+from typing import Optional
 
 from core.config import (
     GITHUB_CLIENT_ID,
@@ -20,6 +21,7 @@ from database.repositories.github.github_installation_state_repo import (
 )
 from core.config import FRONTEND_URL
 from services.auth.jwt_service import JWTService
+from services.auth.auth_service import AuthService
 from services.user.user_service import UserService
 
 
@@ -41,6 +43,7 @@ class GitHubService:
         self.user_repository = UserRepository()
         self.jwt_service = JWTService()
         self.user_service = UserService()
+        self.auth_service = AuthService()
         self.github_installation_state_repository = GitHubInstallationStateRepository()
 
     def get_authorization_url(
@@ -161,9 +164,17 @@ class GitHubService:
                     session=session,
                 )
 
-            return self.jwt_service.create_access_token(
+            access_token = self.jwt_service.create_access_token(
                 user_id=user.id,
             )
+
+            refresh_token = self.auth_service.create_refresh_token(
+                user_id=user.id, session=session
+            )
+
+            session.commit()
+
+            return {"access_token": access_token, "refresh_token": refresh_token}
 
     def get_installation_url(
         self,
@@ -292,7 +303,7 @@ class GitHubService:
     async def repository_exists(
         self,
         clone_url: str,
-        access_token: str,
+        access_token: Optional[str] = None,
     ) -> bool:
 
         parsed = urlparse(clone_url)
@@ -311,13 +322,12 @@ class GitHubService:
         if repo.endswith(".git"):
             repo = repo[:-4]
 
+        headers = {"Accept": "application/vnd.github+json"}
+        if access_token:
+            headers["Authorization"] = f"Bearer {access_token}"
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"https://api.github.com/repos/{owner}/{repo}",
-                headers={
-                    "Authorization": f"Bearer {access_token}",
-                    "Accept": "application/vnd.github+json",
-                },
+                f"https://api.github.com/repos/{owner}/{repo}", headers=headers
             )
 
         if response.status_code == 200:

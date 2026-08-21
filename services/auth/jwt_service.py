@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
+import hashlib
 
 import jwt
 
@@ -48,7 +49,7 @@ class JWTService:
 
         return jwt.encode(payload=payload, key=JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
-    def decode_access_token(
+    def decode_token(
         self,
         token: str,
     ) -> dict:
@@ -57,3 +58,9 @@ class JWTService:
             JWT_SECRET_KEY,
             algorithms=[JWT_ALGORITHM],
         )
+
+    def hash_token(
+        self,
+        token: str,
+    ):
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()

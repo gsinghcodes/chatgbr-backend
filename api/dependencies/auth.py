@@ -18,7 +18,7 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> UserModel:
     try:
-        payload = jwt_service.decode_access_token(
+        payload = jwt_service.decode_token(
             credentials.credentials,
         )
     except jwt.ExpiredSignatureError:
