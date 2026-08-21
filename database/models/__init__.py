@@ -7,3 +7,4 @@ from .user_usage import UserUsageModel
 from .github_installation_state import GitHubInstallationStateModel
 from .conversation import ConversationModel
 from .messages import MessageModel
+from .refresh_tokens import RefreshTokenModel

@@ -60,8 +60,21 @@ async def github_callback(
             detail="Invalid GitHub OAuth state.",
         )
 
-    access_token = await github_service.authenticate(code=code)
+    auth_result = await github_service.authenticate(code=code)
 
-    return RedirectResponse(
-        url=f"{FRONTEND_URL}/auth/github/callback" f"?access_token={access_token}",
+    response = RedirectResponse(
+        url=f"{FRONTEND_URL}/auth/github/callback?access_token={auth_result['access_token']}",
     )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=auth_result["refresh_token"],
+        httponly=True,
+        secure=False,  # True in production — match your /login route
+        samesite="lax",
+        max_age=15 * 24 * 60 * 60,
+    )
+
+    response.delete_cookie(key="github_oauth_state")
+
+    return response
