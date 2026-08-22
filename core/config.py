@@ -22,4 +22,4 @@ GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
 GITHUB_REDIRECT_URI = os.getenv("GITHUB_REDIRECT_URI")
 GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
 
-FRONTEND_URL = "http://localhost:3000"
+FRONTEND_URL = "https://chatgbr-omega.vercel.app/"
