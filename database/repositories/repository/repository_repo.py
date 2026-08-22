@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -28,6 +28,10 @@ class RepositoryRepository(BaseRepository[RepositoryModel]):
             .order_by(RepositoryModel.created_at.desc())
         )
         return list(session.scalars(stmt).all())
+
+    def get_by_id(self, id: UUID, session: Session):
+        stmt = select(RepositoryModel).where(RepositoryModel.id == id)
+        return session.execute(stmt).scalar_one_or_none()
 
     def get_by_name_and_user(
         self, name: str, user_id: UUID, session: Session
@@ -64,3 +68,19 @@ class RepositoryRepository(BaseRepository[RepositoryModel]):
                 .order_by(RepositoryModel.created_at.desc())
             ).all()
         )
+
+    def get_total_storage(
+        self,
+        user_id: UUID,
+        session: Session,
+    ) -> int:
+        statement = select(
+            func.coalesce(
+                func.sum(RepositoryModel.size_in_bytes),
+                0,
+            )
+        ).where(
+            RepositoryModel.user_id == user_id,
+        )
+
+        return session.execute(statement).scalar_one()

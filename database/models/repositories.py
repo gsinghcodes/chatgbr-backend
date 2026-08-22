@@ -53,6 +53,12 @@ class RepositoryModel(Base, DateTimeMixin):
         "CodeChunkModel", back_populates="repository", cascade="all, delete-orphan"
     )
 
+    conversations = relationship(
+        "ConversationModel",
+        back_populates="repository",
+        cascade="all, delete-orphan",
+    )
+
     __table_args__ = (
         UniqueConstraint(
             "user_id",

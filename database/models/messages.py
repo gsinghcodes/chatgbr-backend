@@ -17,7 +17,7 @@ class MessageModel(Base, DateTimeMixin):
 
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("conversations.id"),
+        ForeignKey("conversations.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

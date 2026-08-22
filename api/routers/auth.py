@@ -37,7 +37,7 @@ def register(request: RegisterRequest):
             key="refresh_token",
             value=data["data"]["refresh_token"],
             httponly=True,
-            secure=False,
+            secure=True,
             samesite="lax",
             max_age=15 * 24 * 60 * 60,
         )
@@ -62,7 +62,7 @@ def login(request: LoginRequest, response: Response):
             key="refresh_token",
             value=data["data"]["refresh_token"],
             httponly=True,
-            secure=False,
+            secure=True,
             samesite="lax",
             max_age=15 * 24 * 60 * 60,
         )
@@ -80,7 +80,7 @@ def logout(
     response = JSONResponse(content=data, status_code=data["status"])
 
     response.delete_cookie(
-        key="refresh_token", httponly=True, secure=False, samesite="lax"
+        key="refresh_token", httponly=True, secure=True, samesite="lax"
     )
 
     return response

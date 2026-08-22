@@ -3,7 +3,8 @@ from enum import Enum
 
 class RepositoryStatus(str, Enum):
     PENDING = "PENDING"
-    INDEXING = "INDEXING"
-    INGESTING = "INGESTING"
+    CLONING = "CLONING"
+    CHUNKING = "CHUNKING"
+    EMBEDDING = "EMBEDDING"
     READY = "READY"
     FAILED = "FAILED"

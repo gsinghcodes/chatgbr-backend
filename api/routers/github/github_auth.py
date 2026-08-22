@@ -31,7 +31,7 @@ async def github_login():
         key="github_oauth_state",
         value=state,
         httponly=True,
-        secure=False,  # True in production
+        secure=True,  # True in production
         samesite="lax",
         max_age=600,
     )
@@ -70,7 +70,7 @@ async def github_callback(
         key="refresh_token",
         value=auth_result["refresh_token"],
         httponly=True,
-        secure=False,  # True in production — match your /login route
+        secure=True,  # True in production — match your /login route
         samesite="lax",
         max_age=15 * 24 * 60 * 60,
     )
