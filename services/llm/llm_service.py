@@ -25,6 +25,11 @@ class LLMService:
             content = self.parser.invoke(chunk)
             if content:
                 yield {"type": "token", "content": content}
+            if chunk.usage_metadata:
+                yield {
+                    "type": "usage",
+                    "usage": chunk.usage_metadata,
+                }
 
     def generate_conversation_title(
         self,

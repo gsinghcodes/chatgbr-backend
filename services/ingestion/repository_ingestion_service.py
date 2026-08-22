@@ -4,13 +4,14 @@ import uuid
 from datetime import datetime, timezone
 from core.enums.repositories import RepositoryStatus
 from core.config import REPOSITORIES_ROOT
-
+import shutil
 from database.repositories.code_chunk.code_chunk_repo import CodeChunkRepository
 from database.repositories.embedding.embedding_repo import EmbeddingRepository
 from database.models.code_chunk import CodeChunkModel
 from database.models.embeddings import ChunkEmbeddingModel
 from database.repositories.repository.repository_repo import RepositoryRepository
-
+from fastapi import status
+from utils.responses import send_response
 from services.chunking.chunking_service import ChunkingService
 from services.embeddings.embedding_service import EmbeddingService
 from services.git.git_service import GitService
@@ -53,14 +54,39 @@ class RepositoryIngestionService:
                 )
                 if not repository:
                     raise ValueError("Repository not found")
-                repository.status = RepositoryStatus.INGESTING
-                session.flush()
+                repository.status = RepositoryStatus.CLONING
+                session.commit()
                 repository_path = (
                     REPOSITORIES_ROOT / str(repository.user_id) / str(repository.id)
                 )
                 self.git_service.clone_repository(
-                    repository_url=repository.clone_url, destination=repository_path
+                    repository_url=repository.clone_url,
+                    destination=repository_path,
+                    access_token=repository.user.github_access_token,
                 )
+
+                actual_size = self._get_directory_size(repository_path)
+
+                user = repository.user
+
+                if (
+                    user.storage_used_bytes + actual_size
+                ) > user.plan.storage_limit_bytes:
+                    self.git_service.delete_repository(repository_path)
+                    self.repository_repository.delete(repository, session)
+                    session.commit()
+                    return send_response(
+                        data={},
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        message="Storage limit exceeded. Upgrade your plan or clear up space to add this repository",
+                    )
+
+                repository.size_in_bytes = actual_size
+                user.storage_used_bytes += actual_size
+
+                repository.status = RepositoryStatus.CHUNKING
+                session.commit()
+
                 documents = self.chunking_service.chunk_repository(
                     repository_path=repository_path
                 )
@@ -78,7 +104,8 @@ class RepositoryIngestionService:
                     chunks=chunks, session=session
                 )
 
-                session.flush()
+                repository.status = RepositoryStatus.EMBEDDING
+                session.commit()
 
                 texts = [chunk.content for chunk in chunks]
 
@@ -107,9 +134,26 @@ class RepositoryIngestionService:
                 repository.last_indexed_at = datetime.now(timezone.utc)
 
                 session.commit()
-            except Exception:
+
+                return send_response(
+                    data={},
+                    status_code=status.HTTP_200_OK,
+                    message="Repository ingested",
+                )
+            except Exception as e:
+                print(e)
                 session.rollback()
                 if repository:
                     repository.status = RepositoryStatus.FAILED
                     session.commit()
-                raise
+                return send_response(
+                    data={},
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    message="Error ingesting repository",
+                )
+
+    def _get_directory_size(
+        self,
+        path: Path,
+    ) -> int:
+        return sum(file.stat().st_size for file in path.rglob("*") if file.is_file())

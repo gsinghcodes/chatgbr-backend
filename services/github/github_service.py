@@ -331,14 +331,14 @@ class GitHubService:
             )
 
         if response.status_code == 200:
-            return True
+            return response.json()
 
         if response.status_code == 404:
-            return False
+            return None
 
         response.raise_for_status()
 
-        return False
+        return None
 
     @staticmethod
     def _get_email(

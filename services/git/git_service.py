@@ -1,19 +1,24 @@
 from pathlib import Path
 import shutil
+import os
+import stat
 
 from git import GitCommandError, InvalidGitRepositoryError, NoSuchPathError, Repo
 
 
 class GitService:
     def clone_repository(
-        self,
-        repository_url: str,
-        destination: Path,
+        self, repository_url: str, destination: Path, access_token: str
     ) -> Path:
         destination.parent.mkdir(parents=True, exist_ok=True)
 
+        authenticated_url = repository_url.replace(
+            "https://github.com/",
+            f"https://x-access-token:{access_token}@github.com/",
+        )
+
         Repo.clone_from(
-            repository_url,
+            authenticated_url,
             destination,
         )
 
@@ -24,14 +29,26 @@ class GitService:
         repository_path: Path,
     ) -> None:
         repo = Repo(repository_path)
-        repo.remotes.origin.pull()
+        try:
+            repo.remotes.origin.pull()
+        finally:
+            repo.close()
 
     def delete_repository(
         self,
         repository_path: Path,
     ) -> None:
-        if repository_path.exists():
-            shutil.rmtree(repository_path)
+        if not repository_path.exists():
+            return
+
+        def remove_readonly(func, path, exc_info):
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+
+        shutil.rmtree(
+            repository_path,
+            onerror=remove_readonly,
+        )
 
     def repository_exists(
         self,

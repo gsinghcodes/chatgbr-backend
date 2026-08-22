@@ -1,7 +1,7 @@
 from uuid import UUID
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, BackgroundTasks, status
 from fastapi.responses import StreamingResponse, JSONResponse
 
 from api.dependencies.auth import get_current_user
@@ -73,12 +73,20 @@ def chat(
 )
 async def create_repository(
     request: CreateRepositoryRequest,
+    background_tasks: BackgroundTasks,
     current_user: UserModel = Depends(get_current_user),
 ):
     data = await repository_service.create_repository(
-        user_id=current_user.id,
+        user=current_user,
         clone_url=request.clone_url,
     )
+
+    if data["data"].get("repository"):
+        repository = data["data"]["repository"]
+        background_tasks.add_task(
+            repository_service.repository_ingestion_service.ingest_repository,
+            repository_id=repository["id"],
+        )
 
     return JSONResponse(content=data, status_code=data["status"])
 
@@ -90,40 +98,24 @@ async def create_repository(
 def list_repositories(
     current_user: UserModel = Depends(get_current_user),
 ):
-    repositories = repository_service.list_repositories(
+    data = repository_service.list_repositories(
         user_id=current_user.id,
     )
 
-    return ReturnJSON(
-        message="Repositories fetched successfully.",
-        data=repositories,
-    )
+    return JSONResponse(content=data, status_code=data["status"])
 
 
-@router.get(
-    "/{repository_id}",
-    response_model=ReturnJSON,
-)
+@router.get("/{repository_id}")
 def get_repository(
     repository_id: UUID,
     current_user: UserModel = Depends(get_current_user),
 ):
-    try:
-        repository = repository_service.get_repository(
-            repository_id=repository_id,
-            user_id=current_user.id,
-        )
+    data = repository_service.get_repository(
+        repository_id=repository_id,
+        user_id=current_user.id,
+    )
 
-        return ReturnJSON(
-            message="Repository fetched successfully.",
-            data=repository,
-        )
-
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        )
+    return JSONResponse(content=data, status_code=data["status"])
 
 
 @router.delete(
@@ -134,19 +126,9 @@ def delete_repository(
     repository_id: UUID,
     current_user: UserModel = Depends(get_current_user),
 ):
-    try:
-        repository_service.delete_repository(
-            repository_id=repository_id,
-            user_id=current_user.id,
-        )
+    data = repository_service.delete_repository(
+        repository_id=repository_id,
+        user_id=current_user.id,
+    )
 
-        return ReturnJSON(
-            message="Repository deleted successfully.",
-            data=None,
-        )
-
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        )
+    return JSONResponse(content=data, status_code=data["status"])
